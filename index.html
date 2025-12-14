@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Client - Proyecto 19</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f0f;
+            min-height: 100vh;
+            color: #d7dadc;
+            line-height: 1.6;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #343536;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #ff4500;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        header h1::before {
+            color: #d7dadc;
+            margin-right: 5px;
+        }
+
+        header h1::after {
+            color: #d7dadc;
+            margin-left: 5px;
+        }
+
+        header p {
+            font-size: 1rem;
+            color: #818384;
+            font-weight: 300;
+        }
+
+        #lanesContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .lane {
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            border: 1px solid #343536;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 520px;
+        }
+
+        .lane:hover {
+            border-color: #ff4500;
+            box-shadow: 0 4px 20px rgba(255, 69, 0, 0.2);
+        }
+
+        .lane-header {
+            background: #272729;
+            color: #d7dadc;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #343536;
+        }
+
+        .lane-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #d7dadc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lane-header h2::before {
+            content: "r/";
+            color: #818384;
+            font-weight: 400;
+        }
+
+        .lane-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .lane-btn {
+            background: #343536;
+            color: #d7dadc;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lane-btn:hover {
+            background: #444;
+            color: white;
+        }
+
+        .lane-btn.refresh-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .lane-btn.delete-btn:hover {
+            background: #ff4500;
+        }
+
+        .lane-posts {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            position: relative;
+            background: #0f0f0f;
+        }
+
+        .post {
+            padding: 16px 20px;
+            border-bottom: 1px solid #272729;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            background: #1a1a1a;
+        }
+
+        .post:hover {
+            background: #222;
+            border-left: 4px solid #ff4500;
+            padding-left: 16px;
+        }
+
+        .post h3 {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            color: #d7dadc;
+        }
+
+        .post-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 0.8rem;
+            color: #818384;
+        }
+
+        .post-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(2px);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #343536;
+            border-top: 3px solid #ff4500;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-state {
+            padding: 30px 20px;
+            text-align: center;
+            background: rgba(255, 69, 0, 0.1);
+            border-radius: 6px;
+            margin: 20px;
+            border: 1px solid rgba(255, 69, 0, 0.3);
+        }
+
+        .error-state p {
+            color: #ff6b35;
+            margin-bottom: 12px;
+        }
+
+        .error-state small {
+            color: #818384;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .lane-footer {
+            padding: 15px;
+            border-top: 1px solid #343536;
+            text-align: center;
+            background: #272729;
+        }
+
+        .visit-btn {
+            background: #343536;
+            color: #d7dadc;
+            border: 1px solid #444;
+            padding: 10px 24px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .visit-btn:hover {
+            background: #ff4500;
+            color: white;
+            border-color: #ff4500;
+        }
+
+        .floating-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: #ff4500;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 69, 0, 0.5);
+            background: #ff571a;
+        }
+
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .popup.hidden {
+            display: none;
+        }
+
+        .popup-content {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 8px;
+            width: 450px;
+            max-width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #343536;
+            transform: translateY(0);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .popup-content h2 {
+            margin-bottom: 10px;
+            color: #d7dadc;
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .popup-content p {
+            text-align: center;
+            color: #818384;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+
+        .popup-content input {
+            width: 100%;
+            padding: 14px 16px;
+            background: #0f0f0f;
+            border: 2px solid #343536;
+            border-radius: 4px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            color: #d7dadc;
+            font-family: inherit;
+        }
+
+        .popup-content input:focus {
+            outline: none;
+            border-color: #ff4500;
+            box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.1);
+        }
+
+        .error-message {
+            color: #ff6b35;
+            font-size: 0.9rem;
+            min-height: 40px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            padding: 10px 12px;
+            background: rgba(255, 69, 0, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #ff4500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .success-message {
+            color: #4bc35f;
+            background: rgba(75, 195, 95, 0.1);
+            border-left-color: #4bc35f;
+        }
+
+        .suggestions {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #272729;
+            border-radius: 4px;
+            border-left: 3px solid #ff4500;
+        }
+
+        .suggestion-title {
+            font-size: 0.9rem;
+            color: #ff4500;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .suggestion-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-item {
+            background: #343536;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #d7dadc;
+        }
+
+        .suggestion-item:hover {
+            background: #ff4500;
+            color: white;
+            border-color: #ff4500;
+        }
+
+        .popup-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .primary-btn {
+            flex: 1;
+            padding: 14px;
+            background: #ff4500;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .primary-btn:hover {
+            background: #ff571a;
+        }
+
+        .secondary-btn {
+            flex: 1;
+            padding: 14px;
+            background: #343536;
+            color: #d7dadc;
+            border: 1px solid #444;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .secondary-btn:hover {
+            background: #444;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 30px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            border: 2px dashed #343536;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            color: #d7dadc;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            color: #818384;
+            font-size: 1rem;
+            max-width: 400px;
+            margin: 0 auto 25px;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 15px;
+            }
+
+            header h1 {
+                font-size: 2.2rem;
+            }
+
+            #lanesContainer {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .floating-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 55px;
+                height: 55px;
+                font-size: 25px;
+            }
+
+            .popup-content {
+                width: 90%;
+                padding: 25px 20px;
+            }
+
+            .popup-buttons {
+                flex-direction: column;
+            }
+
+            .lane {
+                height: 500px;
+            }
+        }
+
+        /* Scrollbar styling - Reddit style */
+        .lane-posts::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .lane-posts::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .lane-posts::-webkit-scrollbar-thumb {
+            background: #343536;
+            border-radius: 4px;
+        }
+
+        .lane-posts::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        /* Vote arrows styling */
+        .post-meta .fa-arrow-up {
+            color: #ff4500;
+        }
+
+        .post-meta .fa-comment {
+            color: #818384;
+        }
+
+        .post-meta .fa-user {
+            color: #818384;
+        }
+
+        /* Reddit snoo-inspired elements */
+        .reddit-logo {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: #ff4500;
+            border-radius: 50%;
+            margin-right: 5px;
+            position: relative;
+        }
+
+        .reddit-logo::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Reddit Client</h1>
+            <p>Explore multiple subreddits in customizable lanes</p>
+        </header>
+
+        <main>
+            <div id="lanesContainer"></div>
+
+            <button id="addLaneBtn" class="floating-btn">
+                <i class="fas fa-plus"></i>
+            </button>
+
+            <div id="popup" class="popup hidden">
+                <div class="popup-content">
+                    <h2>Add Subreddit</h2>
+                    <p>Enter the name of a subreddit to add it to your dashboard</p>
+                    <input type="text" id="popupInput" placeholder="e.g. programming, javascript, webdev">
+                    <div id="popupError" class="error-message"></div>
+                    <div id="popupSuggestions" class="suggestions">
+                        <div class="suggestion-title">
+                            <i class="fas fa-fire"></i> Popular Subreddits
+                        </div>
+                        <div class="suggestion-list">
+                            <div class="suggestion-item" onclick="fillSuggestion('programming')">programming</div>
+                            <div class="suggestion-item" onclick="fillSuggestion('javascript')">javascript</div>
+                            <div class="suggestion-item" onclick="fillSuggestion('webdev')">webdev</div>
+                            <div class="suggestion-item" onclick="fillSuggestion('reactjs')">reactjs</div>
+                            <div class="suggestion-item" onclick="fillSuggestion('python')">python</div>
+                        </div>
+                    </div>
+                    <div class="popup-buttons">
+                        <button id="popupAddBtn" class="primary-btn">
+                            <i class="fas fa-plus-circle"></i> Add Subreddit
+                        </button>
+                        <button id="popupCloseBtn" class="secondary-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let lanes = JSON.parse(localStorage.getItem("redditLanes")) || ['learnprogramming', 'javascript'];
+
+        const DOM = {
+            lanesContainer: document.getElementById("lanesContainer"),
+            addLaneBtn: document.getElementById("addLaneBtn"),
+            popup: document.getElementById("popup"),
+            popupInput: document.getElementById("popupInput"),
+            popupError: document.getElementById("popupError"),
+            popupSuggestions: document.getElementById("popupSuggestions")
+        };
+
+        function fillSuggestion(subreddit) {
+            DOM.popupInput.value = subreddit;
+            DOM.popupInput.focus();
+        }
+
+        function saveLanes() {
+            localStorage.setItem("redditLanes", JSON.stringify(lanes));
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num;
+        }
+
+        function createLaneHTML(subreddit) {
+            return `
+                <div class="lane" id="lane-${subreddit}">
+                    <div class="lane-header">
+                        <h2>/r/${subreddit}</h2>
+                        <div class="lane-actions">
+                            <button class="lane-btn refresh-btn" data-subreddit="${subreddit}">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            <button class="lane-btn delete-btn" data-subreddit="${subreddit}">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lane-posts" id="posts-${subreddit}">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading posts from /r/${subreddit}...</p>
+                        </div>
+                    </div>
+                    <div class="lane-footer">
+                        <button class="visit-btn" data-subreddit="${subreddit}">
+                            <i class="fas fa-external-link-alt"></i> Visit /r/${subreddit}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadSubredditPosts(subreddit) {
+            const postsContainer = document.getElementById(`posts-${subreddit}`);
+
+            try {
+                postsContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading posts...</p></div>';
+
+                const response = await fetch(`https://corsproxy.io/?https://www.reddit.com/r/${subreddit}.json?limit=10`);
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+
+                if (!data.data?.children?.length) throw new Error('No posts found');
+
+                displayPosts(subreddit, data.data.children);
+
+            } catch (error) {
+                postsContainer.innerHTML = `
+                    <div class="error-state">
+                        <p><i class="fas fa-exclamation-triangle"></i> Error loading /r/${subreddit}</p>
+                        <p><small>${error.message}</small></p>
+                        <button onclick="loadSubredditPosts('${subreddit}')" class="lane-btn">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayPosts(subreddit, posts) {
+            const postsContainer = document.getElementById(`posts-${subreddit}`);
+            let html = '';
+
+            posts.slice(0, 5).forEach(post => {
+                const data = post.data;
+                html += `
+                    <div class="post" onclick="window.open('https://reddit.com${data.permalink}', '_blank')">
+                        <h3>${data.title}</h3>
+                        <div class="post-meta">
+                            <span><i class="fas fa-user"></i> ${data.author || 'Anonymous'}</span>
+                            <span><i class="fas fa-arrow-up"></i> ${formatNumber(data.ups)}</span>
+                            <span><i class="fas fa-comment"></i> ${formatNumber(data.num_comments)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            postsContainer.innerHTML = html;
+        }
+
+        function deleteLane(subreddit) {
+            if (confirm(`Delete lane for /r/${subreddit}? This action cannot be undone.`)) {
+                lanes = lanes.filter(lane => lane !== subreddit);
+                saveLanes();
+                document.getElementById(`lane-${subreddit}`).remove();
+                
+                if (lanes.length === 0) {
+                    initializeLanes();
+                }
+            }
+        }
+
+        function normalizeSubredditName(input) {
+            return input.trim()
+                .toLowerCase()
+                .replace(/^r\//, '')
+                .replace(/\s+/g, '_')
+                .replace(/[^a-z0-9_]/g, '');
+        }
+
+        function validateSubredditName(name) {
+            if (!name) return 'Please enter a subreddit name';
+            if (name.length < 2) return 'At least 2 characters';
+            if (lanes.includes(name)) return `/r/${name} already exists`;
+            return null;
+        }
+
+        async function addSubredditFromPopup() {
+            const userInput = DOM.popupInput.value.trim();
+            const subreddit = normalizeSubredditName(userInput);
+
+            const error = validateSubredditName(subreddit);
+            if (error) {
+                DOM.popupError.textContent = error;
+                return;
+            }
+
+            DOM.popupError.innerHTML = '<span class="success-message"><i class="fas fa-spinner fa-spin"></i> Checking /r/' + subreddit + '...</span>';
+
+            try {
+                const response = await fetch(`https://corsproxy.io/?https://www.reddit.com/r/${subreddit}/about.json`);
+
+                if (!response.ok) throw new Error(response.status === 404 ? 'Subreddit not found' : 'API error');
+
+                lanes.push(subreddit);
+                saveLanes();
+                DOM.lanesContainer.innerHTML += createLaneHTML(subreddit);
+                await loadSubredditPosts(subreddit);
+
+                closePopup();
+
+            } catch (error) {
+                DOM.popupError.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${error.message}`;
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            const subreddit = e.target.dataset?.subreddit;
+            if (!subreddit) return;
+
+            if (e.target.classList.contains('refresh-btn') || e.target.closest('.refresh-btn')) {
+                loadSubredditPosts(subreddit);
+            }
+            if (e.target.classList.contains('delete-btn') || e.target.closest('.delete-btn')) {
+                deleteLane(subreddit);
+            }
+            if (e.target.classList.contains('visit-btn') || e.target.closest('.visit-btn')) {
+                window.open(`https://reddit.com/r/${subreddit}`, '_blank');
+            }
+        });
+
+        DOM.addLaneBtn.addEventListener('click', () => {
+            DOM.popup.classList.remove('hidden');
+            DOM.popupInput.focus();
+            DOM.popupError.textContent = '';
+        });
+
+        function closePopup() {
+            DOM.popup.classList.add('hidden');
+            DOM.popupInput.value = '';
+            DOM.popupError.textContent = '';
+        }
+
+        document.getElementById('popupCloseBtn').addEventListener('click', closePopup);
+        document.getElementById('popupAddBtn').addEventListener('click', addSubredditFromPopup);
+        DOM.popupInput.addEventListener('keypress', (e) => e.key === 'Enter' && addSubredditFromPopup());
+
+        async function initializeLanes() {
+            if (lanes.length === 0) {
+                DOM.lanesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No subreddit lanes yet</h3>
+                        <p>Start by adding your favorite subreddits to create a personalized dashboard</p>
+                        <button id="addFirstLane" class="primary-btn" style="margin-top: 20px;">
+                            <i class="fas fa-plus-circle"></i> Add Your First Subreddit
+                        </button>
+                    </div>
+                `;
+                document.getElementById('addFirstLane').addEventListener('click', () => {
+                    DOM.popup.classList.remove('hidden');
+                    DOM.popupInput.focus();
+                });
+                return;
+            }
+
+            DOM.lanesContainer.innerHTML = lanes.map(createLaneHTML).join('');
+            lanes.forEach(subreddit => loadSubredditPosts(subreddit));
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeLanes);
+
+        DOM.popup.addEventListener('click', (e) => {
+            if (e.target === DOM.popup) {
+                closePopup();
+            }
+        });
+    </script>
+</body>
+
+</html>
